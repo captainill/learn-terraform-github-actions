@@ -53,7 +53,7 @@ jobs:
 
             *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
 
-              
+
             github.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -66,5 +66,31 @@ jobs:
         run: exit 1
 
       - name: Terraform Apply
+        id: apply
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         run: terraform apply -auto-approve
+
+      - uses: actions/github-script@0.9.0
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        env:
+          APPLY: "terraform\n${{ steps.apply.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = #### Terraform Apply 📖\`${{ steps.apply.outcome }}\`
+
+            <details><summary>Show APPLY</summary>
+
+            \`\`\`${process.env.APPLY}\`\`\`
+
+            </details>
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
